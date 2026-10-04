@@ -108,7 +108,7 @@ body {
    var(--c2); 
   background-size: var(--s) var(--s); 
   color: white;
-  width:15%;
+  width:20%;
   padding:1%;
   border: 5px solid gray;
   float: left;
@@ -143,6 +143,7 @@ body {
   display: block;
   position: relative;
   padding-left: calc(2 * var(--spacing) - var(--radius) - 2px);
+  padding-bottom: 5px
 }
 .tree ul {
   margin-left: calc(var(--radius) - var(--spacing));
