@@ -1,0 +1,18 @@
+/*-------navbar---------*/
+.navText{
+    color:black;
+    font-family: monospace;
+  }
+
+#navIframe{
+    float: left;
+    border: 5px solid gray;
+    margin-left: 1%;
+    margin-right: 1%;
+    height: 800px;
+    width: 25%;
+  }
+
+#navIframe:after{
+    clear: both
+}

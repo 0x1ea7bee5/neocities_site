@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBNS Packet spoofing</title>
+
+    <link href="/css/style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <h1>NBNS Packet Spoofing</h1>
+    <p>So I recently got mildly into "hacking" and security when I decided to join the local defcon group (where I've made some of the coolest friends ever). And by "hacking", I mean fucking around with things and seeing what happens (nothing malicious or particularly skilled on my end). As I was sniffing packets in the tampa airport, I noticed a protocol I had never seen before called nbns.</p>
+    <p>According to the internet, it is very silly. Something about it just tickled my 'tism feelers.</p>
+    <p>When I got back from Tampa, I took a look at my network traffic and saw the same goofy nbns queries being sent from my windows machine. Noice.</p>
+  <h2>NBNS and DNS: The deets</h2>
+  <h3>Quick DNS overview</h3>
+  <p> I'm not sure of how familiar you, dear reader, are with DNS, but it stands for Domain Name Service. At a high level, its a phonebook for IP addresses (or like the contacts app on a phone). A domain name server is a server (in most instances, something like google or cloudflare, or a personal DNS server) that keeps track of hostnames and IP addresses. DNS packets utilize UDP or TCP (rarely), the payload of which contains the DNS payload structure.</p>
+  <img src="/media/blogs/nbns/dnsheader.png" style="width:500px">
+  <a href="https://www.catchpoint.com/blog/how-dns-works">Sauce</a>
+  <p>I'm not going to go over what each bit means because that is not the focus of this post, and I may go over it in a different post. This gets packed into the body of the UDP payload, giving a hierarchical looking yeeyee ass haircut looking ass packet. Here's an example of a query using scapy.</p>
+  <img src="/media/blogs/nbns/dnspacket.png" style="width:500px">
+  <p>So when a machine search for a website, the machine asks the name server "who is this fella?", to which the server responds with a bunch of records containing ip address information. From these records, the querying machine then knows where to route the IP packets.</p>
+  <img src="/media/blogs/nbns/dnsquery.png" style="width:500px">
+  <a href="https://www.researchgate.net/figure/Steps-of-DNS-query-request-response-system_fig1_339082494">Sauce</a>
+  <h3>NBNS </h3>
+  <p>DNS is cool, I guess. Idk man, I just wrangle photons. I wanted to take a look at DNS's younger, sillier, crayon consuming cousin.</p>
+  <p>NBNS stands for NetBIOS Name Service, which, as the name implies, functions similarly to DNS. Most windows machines will default to this if they either a. can't get a response from the DNS server or b. in the case of network printers and the like.</p>
+  <p>It is one of the few services provided by NetBIOS. NetBIOS was made some time back in the 80s; when the hair was poofy, the gasoline was leaded, and it was utterly inconceivable that internet would get so chonky. As such,
+    Netbios doesn't have built-in security, which I would consider a feature and not a bug. But do you know what NetBIOS does have? Datagram services and session services. Datagrams are basically self-contained data packets that can arrive in any order and don't require a connection (UDP datagrams are a good example).
+    A session requires a connection, and it is expected that the data arrives intact and in the correct order (A TCP session is a good example)</p>
+  <p>
+    The packet structure itself isn't too complicated, but kind of a pain in the ass to remember, since it changes quite a bit depending on what type of query you are receiving. I will
+    spare you the details, but <a href="https://www.ietf.org/rfc/rfc1002.html">here</a> is a doc that goes over every detail. 
+    Alternatively, here's an example of an NBNS packet I received from my windows machine</p>
+    <img src="/media/blogs/nbns/example_nbns_packet.png" style="width:1000px">
+  <h2>Results</h2>
+  <p>
+  For this experiment, I've been using <a href="https://scapy.net/">scapy</a> and python, mostly because I wanted to get down and dirty with the details of nbns and other protocols. I'm extremely new to all of this, so any low level exposure to network traffic is as magical and incomprehensible as an electric hotdog cooker to a moth. There do exist packages and software out there that will spoof NBNS responses, but my goal was to have fun and waste time :3
+  </p>
+  <p>Because I don't know what I'm doing, I decided to come out guns a blazin', and reply to the name query. When crafting my packet, I set the op code for query, cleared the Rcode (to tell my windows machine that the name is a-ok), and set the counts and resources to the appropriate values. Also, in order for the transaction to be valid, I need to respond to query with the same transaction ID. So I wrote a quick script to sniff packets until I receive a packet with the right NBNS question name with the correct designation (workstation). I then read the transaction ID, slap that bad boy in my packet, and yeet him off into the ether. </p>
+  <img src="/media/blogs/nbns/nbns_packet_fail.png" style="width:1000px">
+  <p>My first attempt "worked", but I couldn't really do anything (easily) with it. I had forgotten that my ip had changed since my last attempt, so I was telling my windows machine to send traffic to another IP address for a device that doesn't exist, hence the ARP spamming.</p>
+  <img src="/media/blogs/nbns/nbns_success.png" style="width:1000px">
+  <p>So now I'm getting traffic from my windows machine, and I'm specifically getting a whole bunch of SNMP requests.
+  I had done some digging into my windows machine to determine the source of this traffic. I suspect this traffic to be coming from an old printer driver from college, and I tracked the UDP port
+  to spoolsv.exe. Looking into the OIDs of the requests confirms that these requests are tied to brother printers, and some of them are related to Localization.
+  </p>
+  <img src="/media/blogs/nbns/snmprequest.png" style="width:1000px">
+  <p>
+    Alright so this is pretty neat! I got to learn some interesting things about Netbios and SNMP. But I don't think there's a good way for me to do anything interesting by
+    just spoofing traffic. I think I would first need to prove or disprove my suspcions about the source program. As of now, my best guess is that
+    this traffic is coming from the old remote printing driver I installed on my windows laptop back in college. I would guess that maybe my machine is trying to access 
+    information regarding the printers / server, but can't resolve any hostnames (hence, defaulting to NBNS) because I'm no longer connected to the network.
+  </p>
+  <p>This theory could also be complete horseshit idk man. I think at some point in the future, I may revisit this. But for now, I have other things I need to start and then never finish.</p>
+  
+  </body>
+  
+  
+</html>
